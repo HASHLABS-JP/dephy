@@ -1,0 +1,34 @@
+name: Deploy Watchdog Script
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Copy watchdog script to Debian server
+        uses: appleboy/scp-action@v0.1.4
+        with:
+          host: ${{ secrets.DEBIAN_SERVER_IP }}
+          username: ${{ secrets.DEBIAN_SERVER_USER }}
+          key: ${{ secrets.DEBIAN_SERVER_SSH_KEY }}
+          source: "scripts/docker_container_watchdog.sh"
+          target: "/usr/local/bin/docker_container_watchdog.sh"
+
+      - name: Set permissions and restart watchdog service
+        uses: appleboy/ssh-action@v0.1.5
+        with:
+          host: ${{ secrets.DEBIAN_SERVER_IP }}
+          username: ${{ secrets.DEBIAN_SERVER_USER }}
+          key: ${{ secrets.DEBIAN_SERVER_SSH_KEY }}
+          script: |
+            sudo chmod +x /usr/local/bin/docker_container_watchdog.sh
+            sudo supervisorctl reread
+            sudo supervisorctl update
+            sudo supervisorctl restart docker_container_watchdog
